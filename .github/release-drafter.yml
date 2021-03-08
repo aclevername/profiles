@@ -1,0 +1,23 @@
+name-template: 'pctl $NEXT_MINOR_VERSION'
+tag-template: '$NEXT_MINOR_VERSION'
+categories:
+  - title: 'Features'
+    labels:
+      - 'kind/feature'
+  - title: 'Bug Fixes'
+    labels:
+      - 'kind/bug'
+change-template: '- $TITLE (#$NUMBER)'
+template: |
+  # Release $NEXT_MINOR_VERSION
+
+  $CHANGES
+
+  ## Acknowledgments
+  Weaveworks would like to sincerely thank:
+  $CONTRIBUTORS
+replacers:
+  - search: '/@(Callisto13|aclevername|cPu1|weaveworksbot|dependabot(?:\[bot\])?)(?:,| |$)/gm'
+    replace: ''
+exclude-labels:
+  - 'skip-release-notes'
