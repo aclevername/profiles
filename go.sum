@@ -193,8 +193,8 @@ github.com/fluxcd/pkg/apis/meta v0.9.0 h1:rxW69p+VmJCKXXkaRYnovRBFlKjd+MJQfm2RrB
 github.com/fluxcd/pkg/apis/meta v0.9.0/go.mod h1:yHuY8kyGHYz22I0jQzqMMGCcHViuzC/WPdo9Gisk8Po=
 github.com/fluxcd/pkg/runtime v0.11.0 h1:FPsiu1k5NQGl2tsaXH5WgSmrOMg7o44jdOP0rW/TI1Y=
 github.com/fluxcd/pkg/runtime v0.11.0/go.mod h1:ZjAwug6DBLXwo9UdP1/tTPyuWpK9kZ0BEJbctbuEB1o=
-github.com/fluxcd/pkg/version v0.0.1 h1:/8asQoDXSThz3csiwi4Qo8Zb6blAxLXbtxNgeMJ9bCg=
-github.com/fluxcd/pkg/version v0.0.1/go.mod h1:WAF4FEEA9xyhngF8TDxg3UPu5fA1qhEYV8Pmi2Il01Q=
+github.com/fluxcd/pkg/version v0.1.0 h1:v+SmCanmCB5Tj2Cx9TXlj+kNRfPGbAvirkeqsp7ZEAQ=
+github.com/fluxcd/pkg/version v0.1.0/go.mod h1:V7Z/w8dxLQzv0FHqa5ox5TeyOd2zOd49EeuWFgnwyj4=
 github.com/fluxcd/source-controller/api v0.13.1 h1:KzWAECWZBfVROCd7pXojPTd+s/YKu0RFsdTTDi1Djy4=
 github.com/fluxcd/source-controller/api v0.13.1/go.mod h1:+EPyhxC7Y+hUnq7EwAkkLtfbwCxJxF5yfmiyzDk43KY=
 github.com/form3tech-oss/jwt-go v3.2.2+incompatible h1:TcekIExNqud5crz4xD2pavyTgWiPvpYe4Xau31I0PRk=
