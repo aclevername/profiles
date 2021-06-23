@@ -41,7 +41,7 @@ func NewManager(ctx context.Context, namespace string, kClient Kubernetes, timeo
 	return &Manager{
 		kClient:   kClient,
 		namespace: namespace,
-		ctx:       context.TODO(),
+		ctx:       ctx,
 		timeout:   timeout,
 		interval:  interval,
 	}
@@ -69,20 +69,21 @@ func (m *Manager) CreateAndWaitForResources(r profilesv1.Repository, instances [
 }
 
 func (m *Manager) waitForURL(gitRes *sourcev1.GitRepository) error {
-	startTime := time.Now()
+	ctx, cancel := context.WithTimeout(context.Background(), m.timeout)
+	defer cancel()
 	for {
-		err := m.kClient.Get(m.ctx, client.ObjectKeyFromObject(gitRes), gitRes)
-		if err != nil {
-			return fmt.Errorf("failed to get gitrepository: %w", err)
-		}
-		if gitRes.Status.URL != "" {
-			return nil
-		}
-
-		if time.Since(startTime) > m.timeout {
+		select {
+		case <-ctx.Done():
 			return fmt.Errorf("timed out waiting for %s/%s gitrepository.Status.URL to be populated", gitRes.Namespace, gitRes.Name)
+		case <-time.After(m.interval):
+			err := m.kClient.Get(m.ctx, client.ObjectKeyFromObject(gitRes), gitRes)
+			if err != nil {
+				return fmt.Errorf("failed to get gitrepository: %w", err)
+			}
+			if gitRes.Status.URL != "" {
+				return nil
+			}
 		}
-		time.Sleep(m.interval)
 	}
 }
 
@@ -132,7 +133,7 @@ func (m *Manager) DeleteResources(gitRepos []*sourcev1.GitRepository) error {
 	for _, res := range gitRepos {
 		err := m.kClient.Delete(m.ctx, res)
 		if err != nil {
-			return err
+			return fmt.Errorf("failed to delete resource %s/%s: %w", res.Namespace, res.Name, err)
 		}
 	}
 	return nil
