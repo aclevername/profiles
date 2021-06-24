@@ -74,8 +74,12 @@ func (r *ProfileCatalogSourceReconciler) Reconcile(ctx context.Context, req ctrl
 		return ctrl.Result{}, err
 	}
 
-	logger.Info("updating catalog entries", "profiles", pCatalog.Spec.Profiles)
-	r.Profiles.Update(pCatalog.Name, pCatalog.Spec.Profiles...)
+	//can configre spec.Profiles or spec.Repositories, not both.
+	if len(pCatalog.Spec.Profiles) > 0 {
+		logger.Info("updating catalog entries", "profiles", pCatalog.Spec.Profiles)
+		r.Profiles.AddOrReplace(pCatalog.Name, pCatalog.Spec.Profiles...)
+		return ctrl.Result{}, nil
+	}
 
 	timeout := time.Minute * 2
 	interval := time.Second * 5
@@ -91,15 +95,41 @@ func (r *ProfileCatalogSourceReconciler) Reconcile(ctx context.Context, req ctrl
 				return ctrl.Result{}, fmt.Errorf("failed to find secret for repo %v: %w", repo, err)
 			}
 		}
+		var alreadyScannedTags []string
+		for _, scannedRepo := range pCatalog.Status.ScannedRepositories {
+			if scannedRepo.URL == repo.URL {
+				alreadyScannedTags = scannedRepo.Tags
+			}
+		}
 
-		profiles, err := scanner.ScanRepository(repo, secret)
+		profiles, newTags, err := scanner.ScanRepository(repo, secret, alreadyScannedTags)
 		if err != nil {
 			return ctrl.Result{}, err
 		}
-		r.Profiles.Update(pCatalog.Name, profiles...)
+
+		updateScannedRepositoryStatus(&pCatalog, repo, newTags)
+		logger.Info("updating catalog with scanning reuslts", "profiles", profiles)
+		r.Profiles.Append(pCatalog.Name, profiles...)
+	}
+
+	if err := r.Client.Status().Update(ctx, &pCatalog); err != nil {
+		return ctrl.Result{}, fmt.Errorf("failed to patch status: %w", err)
 	}
 
 	return ctrl.Result{}, nil
+}
+
+func updateScannedRepositoryStatus(pCatalog *profilesv1.ProfileCatalogSource, repo profilesv1.Repository, newTags []string) {
+	for _, scannedRepo := range pCatalog.Status.ScannedRepositories {
+		if scannedRepo.URL == repo.URL {
+			scannedRepo.Tags = append(scannedRepo.Tags, newTags...)
+			return
+		}
+	}
+	pCatalog.Status.ScannedRepositories = append(pCatalog.Status.ScannedRepositories, profilesv1.ScannedRepository{
+		URL:  repo.URL,
+		Tags: newTags,
+	})
 }
 
 // SetupWithManager sets up the controller with the Manager.

@@ -28,7 +28,7 @@ var _ = Describe("Catalog", func() {
 			{ProfileDescription: profilesv1.ProfileDescription{Name: "bar"}},
 			{ProfileDescription: profilesv1.ProfileDescription{Name: "alsofoo"}},
 		}
-		c.Update(catName, profiles...)
+		c.Append(catName, profiles...)
 
 		By("returning all the profiles available")
 		Expect(c.SearchAll()).To(ConsistOf(
@@ -48,13 +48,23 @@ var _ = Describe("Catalog", func() {
 			&profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, CatalogSource: catName},
 		))
 
-		By("updating profiles in a catalog source")
+		By("replacing profiles in a catalog source")
 		profiles = []profilesv1.ProfileCatalogEntry{
 			{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}},
 			{ProfileDescription: profilesv1.ProfileDescription{Name: "bar"}},
 		}
-		c.Update(catName, profiles...)
+		c.AddOrReplace(catName, profiles...)
 		Expect(c.Search("foo")).To(ConsistOf(profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, CatalogSource: catName}))
+
+		By("appending profiles in a catalog source")
+		profiles = []profilesv1.ProfileCatalogEntry{
+			{ProfileDescription: profilesv1.ProfileDescription{Name: "bar-2"}},
+		}
+		c.Append(catName, profiles...)
+		Expect(c.Search("bar")).To(ConsistOf(
+			profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "bar"}, CatalogSource: catName},
+			profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "bar-2"}, CatalogSource: catName},
+		))
 
 		By("removing a catalog source")
 		c.Remove(catName)
@@ -68,7 +78,7 @@ var _ = Describe("Catalog", func() {
 				{ProfileDescription: profilesv1.ProfileDescription{Name: "foo", Description: "install foo"}, Tag: "v0.1.0"},
 				{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "0.2.0"},
 				{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}}}
-			c.Update(catName, profiles...)
+			c.AddOrReplace(catName, profiles...)
 
 			Expect(c.GetWithVersion(logger, catName, "foo", "v0.1.0")).To(Equal(
 				&profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "foo", Description: "install foo"}, Tag: "v0.1.0", CatalogSource: catName},
@@ -78,14 +88,14 @@ var _ = Describe("Catalog", func() {
 		When("version is set to latest", func() {
 			It("returns the latest version", func() {
 				profiles := []profilesv1.ProfileCatalogEntry{{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "foo/v0.1.0"}, {ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "foo/0.2.0"}, {ProfileDescription: profilesv1.ProfileDescription{Name: "bar"}, Tag: "bar/0.3.0"}, {ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}}}
-				c.Update(catName, profiles...)
+				c.AddOrReplace(catName, profiles...)
 
 				Expect(c.GetWithVersion(logger, catName, "foo", "latest")).To(Equal(
 					&profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "foo/0.2.0", CatalogSource: catName},
 				))
 
 				profiles = []profilesv1.ProfileCatalogEntry{{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "0.2.0"}, {ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "v0.3.0"}, {ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}}}
-				c.Update(catName, profiles...)
+				c.AddOrReplace(catName, profiles...)
 				Expect(c.GetWithVersion(logger, catName, "foo", "latest")).To(Equal(
 					&profilesv1.ProfileCatalogEntry{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "v0.3.0", CatalogSource: catName},
 				))
@@ -94,7 +104,7 @@ var _ = Describe("Catalog", func() {
 			When("no profile has a valid version", func() {
 				It("returns nil", func() {
 					profiles := []profilesv1.ProfileCatalogEntry{{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "vsda012!.1.0"}, {ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}, Tag: "!0.!2.0"}, {ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}}}
-					c.Update(catName, profiles...)
+					c.AddOrReplace(catName, profiles...)
 
 					Expect(c.GetWithVersion(logger, catName, "foo", "latest")).To(BeNil())
 				})
@@ -117,7 +127,7 @@ var _ = Describe("Catalog", func() {
 				{ProfileDescription: profilesv1.ProfileDescription{Name: "foo2"}, Tag: "v0.3.1"},
 				{ProfileDescription: profilesv1.ProfileDescription{Name: "foo"}},
 			}
-			c.Update(catName, profiles...)
+			c.AddOrReplace(catName, profiles...)
 
 			Expect(c.ProfilesGreaterThanVersion(logger, catName, "foo", "v0.1.0")).To(Equal(
 				[]profilesv1.ProfileCatalogEntry{

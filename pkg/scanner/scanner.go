@@ -57,27 +57,31 @@ func New(gitRepositoryManager GitRepositoryManager, gitClient GitClient, httpCli
 }
 
 //ScanRepository for profiles
-func (s *Scanner) ScanRepository(repo profilesv1.Repository, secret *corev1.Secret) ([]profilesv1.ProfileCatalogEntry, error) {
+func (s *Scanner) ScanRepository(repo profilesv1.Repository, secret *corev1.Secret, alreadyScannedTags []string) ([]profilesv1.ProfileCatalogEntry, []string, error) {
 	tags, err := s.gitClient.ListTags(repo.URL, secret)
 	if err != nil {
-		return nil, fmt.Errorf("failed to list tags: %w", err)
+		return nil, nil, fmt.Errorf("failed to list tags: %w", err)
 	}
 	s.logger.Info("found tags", "url", repo.URL, "tags", tags)
 
 	var instances []gitrepository.Instance
+	var newTags []string
 	for _, tag := range tags {
 		semver, path := getSemverAndPathFromTag(tag)
-		if _, err := version.ParseVersion(semver); err == nil {
-			instances = append(instances, gitrepository.Instance{
-				Tag:  tag,
-				Path: path,
-			})
+		if !containsString(alreadyScannedTags, tag) {
+			newTags = append(newTags, tag)
+			if _, err := version.ParseVersion(semver); err == nil {
+				instances = append(instances, gitrepository.Instance{
+					Tag:  tag,
+					Path: path,
+				})
+			}
 		}
 	}
 
 	gitRepositoryResources, err := s.gitRepositoryManager.CreateAndWaitForResources(repo, instances)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create gitrepository resources: %w", err)
+		return nil, nil, fmt.Errorf("failed to create gitrepository resources: %w", err)
 	}
 	s.logger.Info("gitrepositorys created", "gitrepositories", gitRepositoryResources)
 
@@ -91,7 +95,7 @@ func (s *Scanner) ScanRepository(repo profilesv1.Repository, secret *corev1.Secr
 	for _, gitRepo := range gitRepositoryResources {
 		profileDef, err := s.fetchProfileFromTarball(gitRepo)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 		if profileDef != nil && profileDef.Spec.Name != "" {
 			profiles = append(profiles, profilesv1.ProfileCatalogEntry{
@@ -102,7 +106,16 @@ func (s *Scanner) ScanRepository(repo profilesv1.Repository, secret *corev1.Secr
 		}
 	}
 
-	return profiles, nil
+	return profiles, newTags, nil
+}
+
+func containsString(list []string, value string) bool {
+	for _, v := range list {
+		if v == value {
+			return true
+		}
+	}
+	return false
 }
 
 func (s *Scanner) fetchProfileFromTarball(gitRepo *sourcev1.GitRepository) (*profilesv1.ProfileDefinition, error) {

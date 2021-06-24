@@ -25,8 +25,19 @@ func New() *Catalog {
 	}
 }
 
-// Update updates the catalog by replacing existing profiles with new profiles
-func (c *Catalog) Update(sourceName string, profiles ...profilesv1.ProfileCatalogEntry) {
+// Append appends the existing profiles with new profiles
+func (c *Catalog) Append(sourceName string, profiles ...profilesv1.ProfileCatalogEntry) {
+	existingProfiles, ok := c.m.Load(sourceName)
+	if !ok {
+		c.AddOrReplace(sourceName, profiles...)
+		return
+	}
+	c.AddOrReplace(sourceName, append(existingProfiles.([]profilesv1.ProfileCatalogEntry), profiles...)...)
+}
+
+// AddOrReplace replaces the catalog by replacing existing profiles with new profiles if it exists
+// otherwise it creates it
+func (c *Catalog) AddOrReplace(sourceName string, profiles ...profilesv1.ProfileCatalogEntry) {
 	for i := range profiles {
 		profiles[i].CatalogSource = sourceName
 	}
